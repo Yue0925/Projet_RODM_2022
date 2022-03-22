@@ -125,3 +125,49 @@ function centerAndSaveDataSet(X, Y::Vector{Int64}, outputFile::String)
         println(fout, "Y = ", Y)
     end    
 end 
+
+
+
+function readingData(fileName::String, delim::String)
+
+    datafile = open(fileName)
+    data = readlines(datafile)
+
+    m = size(data, 1)
+    line = filter(x -> x ≠ "" , split(data[1], delim))
+    n = size(line, 1)
+    
+    X = zeros(m, n-2)
+    Y = zeros(Int, ((m)))
+    label = Dict("" => 0)
+    max_class = 0
+
+    l = 0
+    for eachLine in data
+        l += 1
+        line = filter(x -> x ≠ "" , split(eachLine, delim))
+        X[l, : ] .= parse.(Float64, line[2:n-1])
+
+        if !haskey(label, line[n])
+            max_class += 1
+            label[line[n]] = max_class
+        end
+
+        Y[l] = label[line[n]]
+    end
+
+    # @show X[3, :]
+    # @show Y[3]
+
+    close(datafile)
+    return X, Y
+end
+
+
+function transferData()
+    X, Y = readingData("../data/ecoli.data", " ")
+    centerAndSaveDataSet(X, Y, "../data/ecoli.txt")
+
+    X, Y = readingData("../data/glass.data", ",")
+    centerAndSaveDataSet(X, Y, "../data/glass.txt")
+end
