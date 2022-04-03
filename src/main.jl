@@ -4,7 +4,7 @@ include("utilities.jl")
 function main()
 
     # Pour chaque jeu de données
-    for dataSetName in ["iris", "seeds", "wine"]
+    for dataSetName in ["iris", "seeds", "wine", "ecoli", "glass"]
         
         print("=== Dataset ", dataSetName)
 
@@ -19,7 +19,7 @@ function main()
         println(" (train size ", size(X_train, 1), ", test size ", size(X_test, 1), ", ", size(X_train, 2), ", features count: ", size(X_train, 2), ")")
         
         # Temps limite de la méthode de résolution en secondes
-        time_limit = 30
+        time_limit = 60
 
         # Pour chaque profondeur considérée
         for D in 2:4
