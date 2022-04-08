@@ -11,7 +11,7 @@ Entrées :
 - mu (optionnel, utilisé en multivarié): distance minimale à gauche d'une séparation où aucune donnée ne peut se trouver (i.e., pour la séparation ax <= b, il n'y aura aucune donnée dans ]b - ax - mu, b - ax[) (10^-4 par défaut)
 - time_limits (optionnel) : temps maximal de résolution (-1 si le temps n'est pas limité) (-1 par défaut)
 """
-function build_tree(x::Matrix{Float64}, y::Vector{Int64}, D::Int64;multivariate::Bool=false, time_limit::Int64 = -1, mu::Float64=10^(-4))
+function build_tree(x::Matrix{Float64}, y::Vector{Int64}, D::Int64;multivariate::Bool=false, time_limit::Int64 = -1, mu::Float64=10^(-4), one_thread=false)
     
     dataCount = length(y) # Nombre de données d'entraînement
     featuresCount = length(x[1, :]) # Nombre de caractéristiques
@@ -20,7 +20,10 @@ function build_tree(x::Matrix{Float64}, y::Vector{Int64}, D::Int64;multivariate:
     leavesCount = 2^D # Nombre de feuilles de l'arbre
 
     m = Model(CPLEX.Optimizer) 
-    MOI.set(m, MOI.NumberOfThreads(), 1)
+    if one_thread
+        MOI.set(m, MOI.NumberOfThreads(), 1)
+    end
+    
     set_silent(m)
 
     if time_limit!=-1
@@ -165,7 +168,7 @@ Entrées :
 - mu (optionnel, utilisé en multivarié): distance minimale à gauche d'une séparation où aucune donnée ne peut se trouver (i.e., pour la séparation ax <= b, il n'y aura aucune donnée dans ]b - ax - mu, b - ax[) (10^-4 par défaut)
 - time_limits (optionnel) : temps maximal de résolution (-1 si le temps n'est pas limité) (-1 par défaut)
 """
-function build_tree(clusters::Vector{Cluster}, D::Int64;multivariate::Bool=false, time_limit::Int64 = -1, mu::Float64=10^(-4))
+function build_tree(clusters::Vector{Cluster}, D::Int64;multivariate::Bool=false, time_limit::Int64 = -1, mu::Float64=10^(-4), one_thread=false)
     
     clusterCount = length(clusters) # Nombre de données d'entraînement
     featuresCount = length(clusters[1].lBounds) # Nombre de caractéristiques
@@ -174,7 +177,9 @@ function build_tree(clusters::Vector{Cluster}, D::Int64;multivariate::Bool=false
     leavesCount = 2^D # Nombre de feuilles de l'arbre
     
     m = Model(CPLEX.Optimizer) 
-    MOI.set(m, MOI.NumberOfThreads(), 1)
+    if one_thread
+        MOI.set(m, MOI.NumberOfThreads(), 1)
+    end
     set_silent(m) # Masque les sorties du solveur
 
     if time_limit!=-1

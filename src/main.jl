@@ -2,7 +2,7 @@ include("building_tree.jl")
 include("building_tree_callback.jl")
 include("utilities.jl")
 
-function main(cb=false)
+function main(cb=false; onethread=false)
 
     # Pour chaque jeu de données
     for dataSetName in ["iris", "seeds", "wine"] # , "ecoli", "glass"
@@ -34,9 +34,8 @@ function main(cb=false)
                 T, obj, resolution_time, gap = build_tree_callback(X_train, Y_train, D,  multivariate = false, time_limit = time_limit)
             else
                 print("    Univarié...  \t")
-                T, obj, resolution_time, gap = build_tree(X_train, Y_train, D,  multivariate = false, time_limit = time_limit)
+                T, obj, resolution_time, gap = build_tree(X_train, Y_train, D,  multivariate = false, time_limit = time_limit, one_thread = onethread)
             end
-            T, obj, resolution_time, gap = build_tree(X_train, Y_train, D,  multivariate = false, time_limit = time_limit)
 
             # Test de la performance de l'arbre
             print(round(resolution_time, digits = 1), "s\t")
@@ -48,8 +47,14 @@ function main(cb=false)
             println()
 
             ## 2 - Multivarié
-            print("    Multivarié...\t")
-            T, obj, resolution_time, gap = build_tree(X_train, Y_train, D, multivariate = true, time_limit = time_limit)
+            if cb
+                print("    Multivarié(cb)...\t")
+                T, obj, resolution_time, gap = build_tree_callback(X_train, Y_train, D, multivariate = true, time_limit = time_limit)
+            else
+                print("    Multivarié...\t")
+                T, obj, resolution_time, gap = build_tree(X_train, Y_train, D, multivariate = true, time_limit = time_limit, one_thread = onethread)
+            end
+            
             print(round(resolution_time, digits = 1), "s\t")
             print("gap ", round(gap, digits = 1), "%\t")
             if T != nothing
