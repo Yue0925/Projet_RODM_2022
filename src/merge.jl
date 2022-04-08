@@ -241,3 +241,95 @@ function merge!(c1::Cluster, c2::Cluster)
     c1.lBounds = min.(c1.lBounds, c2.lBounds)
     c1.uBounds = max.(c1.uBounds, c2.uBounds)    
 end
+
+
+TOL = 0.00001
+
+"""
+Regroupement par Facility Location problem
+"""
+function cplexFLPMerge(x, y, γ, γ0)
+    #TODO : add constraint that each cluster contains only same class data
+    
+    n = length(y)
+    m = length(x[1,:])
+    k = max(floor(Int, n * γ), γ0) # number of clusters
+    if k==n
+        groups = [[i] for i in 1:k]
+        groups_class = [y[i] for i in 1:k]
+        return groups, groups_class
+    end
+    groups = [[] for _ in 1:k]
+    groups_class = [0 for _ in 1:k]
+    Big_M = euclidean([1 for _ in 1:m], [0 for _ in 1:m])
+
+    @show n, m, k, Big_M
+
+    # modelling
+    M = Model(CPLEX.Optimizer) 
+    set_silent(M)
+
+    # variables
+    @variable(M, χ[1:n, 1:k], Bin)
+    @variable(M, l ≥ 0)
+
+    # constraints
+    @constraint( M, 
+        [cl in 1:k],
+        sum(χ[i, cl] for i in 1:n) ≥ 1 
+    )
+
+    @constraint( M,
+        [i in 1:n],
+        sum(χ[i, cl] for cl in 1:k) == 1
+    )
+
+    @constraint(M,
+        [cl in 1:k, i in 1:n-1, j in i+1:n],
+        l ≥ euclidean(x[i, :], x[j, :]) - (χ[i, cl] + χ[j, cl] - 2) * Big_M
+    )
+
+    # objective
+    @objective(M, Min, l)
+
+    # solve
+    optimize!(M)
+    # status of model
+    status = termination_status(M)
+    isOptimal = status == MOI.OPTIMAL
+    @info "status", status
+
+    # stock informations
+    if has_values(M)
+        for id in 1:n, cl in 1:k
+            if value(χ[id, cl]) > TOL
+                append!(groups[cl], id)
+            end
+        end
+
+        for cl in 1:k
+            class_count = Dict(0 => 0)
+            for id in groups[cl]
+                if haskey(class_count, y[id])
+                    tmp = class_count[ y[id] ] +1
+                    class_count[ y[id] ] = tmp
+                else
+                    class_count[ y[id] ] = 1
+                end
+            end
+
+            max_c = 0
+            for (id, count) in class_count
+                if count > class_count[max_c]
+                    max_c = id
+                end
+            end
+            groups_class[cl] = max_c
+        end
+
+    else
+        error("cplexFLPMerge() cannot find a solution !")
+    end
+
+    return groups, groups_class
+end

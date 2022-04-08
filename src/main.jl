@@ -1,10 +1,11 @@
 include("building_tree.jl")
+include("building_tree_callback.jl")
 include("utilities.jl")
 
-function main()
+function main(cb=false; onethread=false)
 
     # Pour chaque jeu de données
-    for dataSetName in ["iris", "seeds", "wine"]
+    for dataSetName in ["iris", "seeds", "wine"] # , "ecoli", "glass"
         
         print("=== Dataset ", dataSetName)
 
@@ -19,7 +20,7 @@ function main()
         println(" (train size ", size(X_train, 1), ", test size ", size(X_test, 1), ", ", size(X_train, 2), ", features count: ", size(X_train, 2), ")")
         
         # Temps limite de la méthode de résolution en secondes
-        time_limit = 30
+        time_limit = 30 #TODO : change to 60
 
         # Pour chaque profondeur considérée
         for D in 2:4
@@ -28,8 +29,13 @@ function main()
 
             ## 1 - Univarié (séparation sur une seule variable à la fois)
             # Création de l'arbre
-            print("    Univarié...  \t")
-            T, obj, resolution_time, gap = build_tree(X_train, Y_train, D,  multivariate = false, time_limit = time_limit)
+            if cb
+                print("    Univarié(cb)...  \t")
+                T, obj, resolution_time, gap = build_tree_callback(X_train, Y_train, D,  multivariate = false, time_limit = time_limit)
+            else
+                print("    Univarié...  \t")
+                T, obj, resolution_time, gap = build_tree(X_train, Y_train, D,  multivariate = false, time_limit = time_limit, one_thread = onethread)
+            end
 
             # Test de la performance de l'arbre
             print(round(resolution_time, digits = 1), "s\t")
@@ -41,8 +47,14 @@ function main()
             println()
 
             ## 2 - Multivarié
-            print("    Multivarié...\t")
-            T, obj, resolution_time, gap = build_tree(X_train, Y_train, D, multivariate = true, time_limit = time_limit)
+            if cb
+                print("    Multivarié(cb)...\t")
+                T, obj, resolution_time, gap = build_tree_callback(X_train, Y_train, D, multivariate = true, time_limit = time_limit)
+            else
+                print("    Multivarié...\t")
+                T, obj, resolution_time, gap = build_tree(X_train, Y_train, D, multivariate = true, time_limit = time_limit, one_thread = onethread)
+            end
+            
             print(round(resolution_time, digits = 1), "s\t")
             print("gap ", round(gap, digits = 1), "%\t")
             if T != nothing

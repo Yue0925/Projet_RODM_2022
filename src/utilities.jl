@@ -116,9 +116,13 @@ function centerData(X)
     return result
 end
 
-function centerAndSaveDataSet(X, Y::Vector{Int64}, outputFile::String)
+function centerAndSaveDataSet(X, Y::Vector{Int64}, outputFile::String; center=true)
+    if center
+        centeredX = centerData(X)
+    else
+        centeredX = X
+    end
     
-    centeredX = centerData(X)
 
     open(outputFile, "w") do fout
         println(fout, "X = ", centeredX)
@@ -166,7 +170,7 @@ end
 
 function transferData()
     X, Y = readingData("../data/ecoli.data", " ")
-    centerAndSaveDataSet(X, Y, "../data/ecoli.txt")
+    centerAndSaveDataSet(X, Y, "../data/ecoli.txt", center=false)
 
     X, Y = readingData("../data/glass.data", ",")
     centerAndSaveDataSet(X, Y, "../data/glass.txt")
