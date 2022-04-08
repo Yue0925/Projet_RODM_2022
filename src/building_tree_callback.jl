@@ -1,4 +1,35 @@
+TOL = 0.00001
+
+
 include("struct/tree.jl")
+
+
+"""
+Fonction permettant de tester si un callback est appelé car une solution entière a été obtenue
+"""
+function isIntegerPoint(cb_data::CPLEX.CallbackContext, context_id::Clong)
+
+    # context_id == CPX_CALLBACKCONTEXT_CANDIDATE si le callback est appelé dans un des deux cas suivants :
+    # cas 1 - une solution entière a été obtenue; ou
+    # cas 2 - une relaxation non bornée a été obtenue
+    if context_id != CPX_CALLBACKCONTEXT_CANDIDATE
+        return false
+    end
+
+    # Pour déterminer si on est dans le cas 1 ou 2, on essaie de récupérer la
+    # solution entière courante
+    ispoint_p = Ref{Cint}()
+    ret = CPXcallbackcandidateispoint(cb_data, ispoint_p)
+
+    # S'il n'y a pas de solution entière
+    if ret != 0 || ispoint_p[] == 0
+        return false
+    else
+        return true
+    end
+end
+
+
 
 """
 Construit un arbre de décision par résolution d'un programme linéaire en nombres entiers
@@ -11,7 +42,7 @@ Entrées :
 - mu (optionnel, utilisé en multivarié): distance minimale à gauche d'une séparation où aucune donnée ne peut se trouver (i.e., pour la séparation ax <= b, il n'y aura aucune donnée dans ]b - ax - mu, b - ax[) (10^-4 par défaut)
 - time_limits (optionnel) : temps maximal de résolution (-1 si le temps n'est pas limité) (-1 par défaut)
 """
-function build_tree(x::Matrix{Float64}, y::Vector{Int64}, D::Int64;multivariate::Bool=false, time_limit::Int64 = -1, mu::Float64=10^(-4))
+function build_tree_callback(x::Matrix{Float64}, y::Vector{Int64}, D::Int64;multivariate::Bool=false, time_limit::Int64 = -1, mu::Float64=10^(-4))
     
     dataCount = length(y) # Nombre de données d'entraînement
     featuresCount = length(x[1, :]) # Nombre de caractéristiques
@@ -89,6 +120,8 @@ function build_tree(x::Matrix{Float64}, y::Vector{Int64}, D::Int64;multivariate:
     @constraint(m, [i in 1:dataCount, t in 1:sepCount], u_at[i, t] == u_at[i, t*2] + u_at[i, t*2+1] + u_tw[i, t]) # conservation du flot dans les noeuds de branchement
     @constraint(m, [i in 1:dataCount, t in (sepCount+1):(sepCount+leavesCount)], u_at[i, t] == u_tw[i, t]) # conservation du flot dans les feuilles
     @constraint(m, [i in 1:dataCount, t in 1:(sepCount+leavesCount)], u_tw[i, t] <= c[y[i], t]) # contrainte de capacité qui impose le flot a etre nul si la classe de la feuille n'est pas la bonne
+    
+    # inégalités de séparation
     if multivariate
         @constraint(m, [i in 1:dataCount, t in 1:sepCount], sum(a[j, t]*x[i, j] for j in 1:featuresCount) + mu <= b[t] + (2+mu)*(1-u_at[i, t*2])) # contrainte de capacité controlant le passage dans le noeud fils gauche
         @constraint(m, [i in 1:dataCount, t in 1:sepCount], sum(a[j, t]*x[i, j] for j in 1:featuresCount) >= b[t] - 2*(1-u_at[i, t*2 + 1])) # contrainte de capacité controlant le passage dans le noeud fils droit
@@ -107,7 +140,68 @@ function build_tree(x::Matrix{Float64}, y::Vector{Int64}, D::Int64;multivariate:
         @objective(m, Max, sum(u_at[i, 1] for i in 1:dataCount))
     end
 
-    classif = @expression(m, sum(u_at[i, 1] for i in 1:dataCount))
+    # classif = @expression(m, sum(u_at[i, 1] for i in 1:dataCount))
+    
+    """
+    Apply the separation inequalities only if the integer point is violated.
+    """
+    function my_callback(cb_data::CPLEX.CallbackContext, context_id::Clong)
+        if isIntegerPoint(cb_data, context_id)
+            CPLEX.load_callback_variable_primal(cb_data, context_id)
+
+            a_star = callback_value.(cb_data, a)
+            u_at_star = callback_value.(cb_data, u_at)
+            b_star = callback_value.(cb_data, b)
+
+            todo = false
+
+            if multivariate
+
+                for i in 1:dataCount, t in 1:sepCount
+                    # contrainte de capacité controlant le passage dans le noeud fils gauche
+                    if sum(a_star[j, t]*x[i, j] for j in 1:featuresCount) + mu > b_star[t] + (2+mu)*(1-u_at_star[i, t*2]) + TOL
+                        con_sep_left = @build_constraint( sum(a[j, t]*x[i, j] for j in 1:featuresCount) + mu <= b[t] + (2+mu)*(1-u_at[i, t*2]))
+                        MOI.submit(m, MOI.LazyConstraint(cb_data), con_sep_left)
+                        todo = true
+                    end
+
+                    # contrainte de capacité controlant le passage dans le noeud fils droit
+                    if sum(a_star[j, t]*x[i, j] for j in 1:featuresCount) < b_star[t] - 2*(1-u_at_star[i, t*2 + 1]) - TOL
+                        con_sep_right = @build_constraint(sum(a[j, t]*x[i, j] for j in 1:featuresCount) >= b[t] - 2*(1-u_at[i, t*2 + 1]))
+                        MOI.submit(m, MOI.LazyConstraint(cb_data), con_sep_right)
+                        todo = true
+                    end
+
+                    if todo
+                        break                        
+                    end
+                end
+            else
+
+                for i in 1:dataCount, t in 1:sepCount
+                    # contrainte de capacité controlant le passage dans le noeud fils gauche
+                    if sum(a_star[j, t]*(x[i, j]+mu_vect[j]-mu_min) for j in 1:featuresCount) + mu_min > b_star[t] + (1+mu_max)*(1-u_at_star[i, t*2]) + TOL
+                        con_sep_left = @build_constraint(sum(a[j, t]*(x[i, j]+mu_vect[j]-mu_min) for j in 1:featuresCount) + mu_min <= b[t] + (1+mu_max)*(1-u_at[i, t*2]))
+                        MOI.submit(m, MOI.LazyConstraint(cb_data), con_sep_left)
+                        todo = true
+                    end
+
+                    # contrainte de capacité controlant le passage dans le noeud fils droit
+                    if sum(a_star[j, t]*x[i, j] for j in 1:featuresCount) < b_star[t] - (1-u_at_star[i, t*2 + 1]) - TOL
+                        con_sep_right = @build_constraint(sum(a[j, t]*x[i, j] for j in 1:featuresCount) >= b[t] - (1-u_at[i, t*2 + 1]))
+                        MOI.submit(m, MOI.LazyConstraint(cb_data), con_sep_right)
+                        todo = true
+                    end
+
+                    if todo
+                        break
+                    end
+                end
+            end
+        end
+    end
+
+    MOI.set(m, CPLEX.CallbackFunction(), my_callback)
 
     starting_time = time()
     optimize!(m)
@@ -165,7 +259,7 @@ Entrées :
 - mu (optionnel, utilisé en multivarié): distance minimale à gauche d'une séparation où aucune donnée ne peut se trouver (i.e., pour la séparation ax <= b, il n'y aura aucune donnée dans ]b - ax - mu, b - ax[) (10^-4 par défaut)
 - time_limits (optionnel) : temps maximal de résolution (-1 si le temps n'est pas limité) (-1 par défaut)
 """
-function build_tree(clusters::Vector{Cluster}, D::Int64;multivariate::Bool=false, time_limit::Int64 = -1, mu::Float64=10^(-4))
+function build_tree_callback(clusters::Vector{Cluster}, D::Int64;multivariate::Bool=false, time_limit::Int64 = -1, mu::Float64=10^(-4))
     
     clusterCount = length(clusters) # Nombre de données d'entraînement
     featuresCount = length(clusters[1].lBounds) # Nombre de caractéristiques
@@ -175,6 +269,7 @@ function build_tree(clusters::Vector{Cluster}, D::Int64;multivariate::Bool=false
     
     m = Model(CPLEX.Optimizer) 
     MOI.set(m, MOI.NumberOfThreads(), 1)
+
     set_silent(m) # Masque les sorties du solveur
 
     if time_limit!=-1

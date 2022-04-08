@@ -1,10 +1,11 @@
 include("building_tree.jl")
+include("building_tree_callback.jl")
 include("utilities.jl")
 
-function main()
+function main(cb=false)
 
     # Pour chaque jeu de données
-    for dataSetName in ["iris", "seeds", "wine", "ecoli", "glass"]
+    for dataSetName in ["iris", "seeds", "wine"] # , "ecoli", "glass"
         
         print("=== Dataset ", dataSetName)
 
@@ -19,7 +20,7 @@ function main()
         println(" (train size ", size(X_train, 1), ", test size ", size(X_test, 1), ", ", size(X_train, 2), ", features count: ", size(X_train, 2), ")")
         
         # Temps limite de la méthode de résolution en secondes
-        time_limit = 60
+        time_limit = 30 #TODO : change to 60
 
         # Pour chaque profondeur considérée
         for D in 2:4
@@ -28,7 +29,13 @@ function main()
 
             ## 1 - Univarié (séparation sur une seule variable à la fois)
             # Création de l'arbre
-            print("    Univarié...  \t")
+            if cb
+                print("    Univarié(cb)...  \t")
+                T, obj, resolution_time, gap = build_tree_callback(X_train, Y_train, D,  multivariate = false, time_limit = time_limit)
+            else
+                print("    Univarié...  \t")
+                T, obj, resolution_time, gap = build_tree(X_train, Y_train, D,  multivariate = false, time_limit = time_limit)
+            end
             T, obj, resolution_time, gap = build_tree(X_train, Y_train, D,  multivariate = false, time_limit = time_limit)
 
             # Test de la performance de l'arbre
