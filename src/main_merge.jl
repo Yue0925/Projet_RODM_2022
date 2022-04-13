@@ -1,11 +1,13 @@
 include("building_tree.jl")
+include("building_tree_callback.jl")
 include("utilities.jl")
 include("merge.jl")
 
-function main_merge()
+function main_merge(cb=false; onethread=false, fout)
     for dataSetName in ["iris", "seeds", "wine", "ecoli", "glass"]
         
         print("=== Dataset ", dataSetName)
+        print(fout, dataSetName * " & ")
         
         # Préparation des données
         include("../data/" * dataSetName * ".txt") 
@@ -16,30 +18,44 @@ function main_merge()
         Y_test = Y[test]
 
         println(" (train size ", size(X_train, 1), ", test size ", size(X_test, 1), ", ", size(X_train, 2), ", features count: ", size(X_train, 2), ")")
-        
+        print(fout, string(size(X_train, 1),) * " & " * string(size(X_test, 1)) * " & ")
         # Temps limite de la méthode de résolution en secondes        
-        time_limit = 10 #TODO : change to 30
+        time_limit = 30 #TODO : change to 30
 
         for D in 2:4
             println("\tD = ", D)
-            println("\t\tUnivarié")
-            testSimpleMerge(X_train, Y_train, X_test, Y_test, D, time_limit = time_limit, isMultivariate = false)
+            print(fout, string(D) * " & ")
+
+            if cb
+                println("\t\tUnivarié(cb)")
+            else
+                println("\t\tUnivarié")
+            end
+            print(fout, "Univarié & " )
+            testSimpleMerge(X_train, Y_train, X_test, Y_test, D, time_limit = time_limit, isMultivariate = false, cb=cb, onethread=onethread, fout=fout)
             # break
-            println("\t\tMultivarié")
-            testSimpleMerge(X_train, Y_train, X_test, Y_test, D, time_limit = time_limit, isMultivariate = true)
+
+            if cb
+                println("\t\tMultivarié(cb)")
+            else
+                println("\t\tMultivarié")
+            end
+            print(fout, "Multivarié & " )
+            testSimpleMerge(X_train, Y_train, X_test, Y_test, D, time_limit = time_limit, isMultivariate = true, cb=cb, onethread=onethread, fout=fout)
         end
         # break
     end
 end 
 
 
-function testSimpleMerge(X_train, Y_train, X_test, Y_test, D; time_limit::Int=-1, isMultivariate::Bool = false)
+function testSimpleMerge(X_train, Y_train, X_test, Y_test, D; time_limit::Int=-1, isMultivariate::Bool = false, cb=false, onethread=false, fout)
 
     # Pour tout pourcentage de regroupement considéré
     println("\t\t\tGamma\t\t# clusters\tGap")
 
     for gamma in 0:0.2:1
         print("\t\t\t", gamma * 100, "%\t\t")
+        print(fout, string(gamma) * " & ")
 
         clusters = simpleMerge(X_train, Y_train, gamma)
 
@@ -64,12 +80,18 @@ function testSimpleMerge(X_train, Y_train, X_test, Y_test, D; time_limit::Int=-1
         # @show clusters[1].class
         # break
 
-        T, obj, resolution_time, gap = build_tree(clusters, D, multivariate = isMultivariate, time_limit = time_limit)
-
+        if cb
+            T, obj, resolution_time, gap = build_tree_callback(clusters, D, multivariate = isMultivariate, time_limit = time_limit)
+        else
+            T, obj, resolution_time, gap = build_tree(clusters, D, multivariate = isMultivariate, time_limit = time_limit)
+        end
+        
         print(round(gap, digits = 1), "%\t") 
         print("Erreurs train/test : ", prediction_errors(T,X_train,Y_train))
         print("/", prediction_errors(T,X_test,Y_test), "\t")
         println(round(resolution_time, digits=1), "s")
+        println(fout, string(round(resolution_time, digits=1)) * " & " * string(round(gap, digits = 1)) * " & " *
+            string(prediction_errors(T,X_train,Y_train)) * " & " * string(prediction_errors(T,X_test,Y_test)) * "\\\\ ")
     end
     println() 
 end 
@@ -121,3 +143,33 @@ function pre_processing()
 
     end
 end
+
+
+function table_main_merge()
+    cb=false; onethread=true
+    fout = open("../res/main_merge.tex", "w")
+
+    latex = raw"""\begin{table}[htbp]
+    \centering
+    \renewcommand{\arraystretch}{1.2}
+    \begin{tabular}{|c|cc|c|c|c|c|c|cc|}
+    \toprule
+    \textbf{Data} & \multicolumn{2}{c|}{\textbf{Size}} & \textbf{Profondeur} & \textbf{Séparation} & $\mathbf{\gamma}$ & \textbf{Temps} & \textbf{Gap} & \multicolumn{2}{c|}{\textbf{Erreur}} \\
+    % \cmidrule(r){3-4} \cmidrule(r){9-10}
+     & \textbf{Train} & \textbf{Test} & & & & & & \textbf{Train} & \textbf{Test} \\
+    \midrule
+    """
+    println(fout, latex)
+    main_merge(cb, onethread=onethread, fout=fout)
+
+
+    latex = raw"""\bottomrule
+    \end{tabular}
+    \caption{ .}
+    \label{tab:mainMerge}
+    \end{table}
+"""
+    println(fout, latex)
+    close(fout)
+end
+
