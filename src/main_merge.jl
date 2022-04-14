@@ -7,7 +7,7 @@ function main_merge(cb=false; onethread=false, fout)
     for dataSetName in ["iris", "seeds", "wine", "ecoli", "glass"]
         
         print("=== Dataset ", dataSetName)
-        print(fout, dataSetName * " & ")
+        print(fout, "\\multirow{18}*{"* dataSetName * "} & ")
         
         # Préparation des données
         include("../data/" * dataSetName * ".txt") 
@@ -18,20 +18,28 @@ function main_merge(cb=false; onethread=false, fout)
         Y_test = Y[test]
 
         println(" (train size ", size(X_train, 1), ", test size ", size(X_test, 1), ", ", size(X_train, 2), ", features count: ", size(X_train, 2), ")")
-        print(fout, string(size(X_train, 1),) * " & " * string(size(X_test, 1)) * " & ")
+        print(fout, "\\multirow{18}*{" * string(size(X_train, 1),) * "} & \\multirow{18}*{" * string(size(X_test, 1)) * "} & ")
         # Temps limite de la méthode de résolution en secondes        
         time_limit = 30 #TODO : change to 30
 
         for D in 2:4
             println("\tD = ", D)
-            print(fout, string(D) * " & ")
-
+            if D > 2
+                print(fout, " & & & \\multirow{12}*{" * string(D) * "} & ")
+            else
+                print(fout, "\\multirow{12}*{" * string(D) * "} & ")
+            end
+            
             if cb
                 println("\t\tUnivarié(cb)")
             else
                 println("\t\tUnivarié")
             end
-            print(fout, "Univarié & " )
+            # if D > 2
+            #     print(fout, " & & & \\multirow{6}*{Univarié} & " )
+            # else
+                print(fout, "\\multirow{6}*{Univarié} & " )
+            # end
             testSimpleMerge(X_train, Y_train, X_test, Y_test, D, time_limit = time_limit, isMultivariate = false, cb=cb, onethread=onethread, fout=fout)
             # break
 
@@ -40,7 +48,7 @@ function main_merge(cb=false; onethread=false, fout)
             else
                 println("\t\tMultivarié")
             end
-            print(fout, "Multivarié & " )
+            print(fout, " & & & & \\multirow{6}*{Multivarié} & " )
             testSimpleMerge(X_train, Y_train, X_test, Y_test, D, time_limit = time_limit, isMultivariate = true, cb=cb, onethread=onethread, fout=fout)
         end
         # break
@@ -54,8 +62,12 @@ function testSimpleMerge(X_train, Y_train, X_test, Y_test, D; time_limit::Int=-1
     println("\t\t\tGamma\t\t# clusters\tGap")
 
     for gamma in 0:0.2:1
+        if gamma > 0
+            print(fout, " & & & & & " * string(gamma) * " & ")
+        else
+            print(fout, string(gamma) * " & ")
+        end
         print("\t\t\t", gamma * 100, "%\t\t")
-        print(fout, string(gamma) * " & ")
 
         clusters = simpleMerge(X_train, Y_train, gamma)
 
@@ -145,9 +157,13 @@ function pre_processing()
 end
 
 
-function table_main_merge()
-    cb=false; onethread=true
-    fout = open("../res/main_merge.tex", "w")
+function table_main_merge(cb=false)
+    onethread=true
+    if cb
+        fout = open("../res/main_merge_callback.tex", "w")
+    else
+        fout = open("../res/main_merge.tex", "w")
+    end
 
     latex = raw"""\begin{table}[htbp]
     \centering
@@ -163,12 +179,22 @@ function table_main_merge()
     main_merge(cb, onethread=onethread, fout=fout)
 
 
-    latex = raw"""\bottomrule
+    if cb
+        latex = raw"""\bottomrule
     \end{tabular}
-    \caption{ .}
+    \caption{Résultats numériques avec regroupement naïve utilisant callback .}
+    \label{tab:mainMergeCallback}
+    \end{table}
+"""
+    else
+        latex = raw"""\bottomrule
+    \end{tabular}
+    \caption{Résultats numériques avec regroupement naïve .}
     \label{tab:mainMerge}
     \end{table}
 """
+    end
+    
     println(fout, latex)
     close(fout)
 end

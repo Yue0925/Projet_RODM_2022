@@ -1,0 +1,47 @@
+\begin{table}[htbp]
+\centering
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|c|c|cc|c|c|c|c|cc|}
+\toprule
+\textbf{Data} & \textbf{Features} & \multicolumn{2}{c|}{\textbf{Size}} & \textbf{Profondeur} & \textbf{Séparation} & \textbf{Temps(s)} & \textbf{Gap} & \multicolumn{2}{c|}{\textbf{Erreur}} \\
+% \cmidrule(r){3-4} \cmidrule(r){9-10}
+ & & \textbf{Train} & \textbf{Test} & & & & & \textbf{Train} & \textbf{Test} \\
+\midrule
+
+
+\multirow{6}*{\textbf{iris}} & \multirow{6}*{\textbf{4}} & \multirow{6}*{\textbf{120}} & \multirow{6}*{\textbf{30}} & \multirow{2}*{\textbf{2}} & Univarié & 17.2 & 0.0\% & 5 & 2 \\
+ & & & & & Multivarié & 11.5 & 0.0\% & 1 & 1\\ \cline{5-10}
+ & & & & \multirow{2}*{\textbf{3}} & Univarié & 60.0 & 7.1\% & 6 & 2 \\
+ & & & & & Multivarié & 8.1 & 0.0\% & 0 & 1\\ \cline{5-10}
+ & & & & \multirow{2}*{\textbf{4}} & Univarié & 60.0 & 1.2e8\% & 82 & 18 \\
+ & & & & & Multivarié & 60.0 & 36.4\% & 9 & 3\\ \cline{5-10}
+\multirow{6}*{\textbf{seeds}} & \multirow{6}*{\textbf{6}} & \multirow{6}*{\textbf{168}} & \multirow{6}*{\textbf{42}} & \multirow{2}*{\textbf{2}} & Univarié & 60.0 & 6.4\% & 12 & 3 \\
+ & & & & & Multivarié & 11.5 & 0.0\% & 0 & 1\\ \cline{5-10}
+ & & & & \multirow{2}*{\textbf{3}} & Univarié & 60.0 & 15.1\% & 14 & 3 \\
+ & & & & & Multivarié & 60.0 & 5.7\% & 6 & 0\\ \cline{5-10}
+ & & & & \multirow{2}*{\textbf{4}} & Univarié & 60.1 & 4099.9\% & 112 & 28 \\
+ & & & & & Multivarié & 60.0 & 31.2\% & 27 & 5\\ \cline{5-10}
+\multirow{6}*{\textbf{wine}} & \multirow{6}*{\textbf{13}} & \multirow{6}*{\textbf{142}} & \multirow{6}*{\textbf{36}} & \multirow{2}*{\textbf{2}} & Univarié & 60.0 & 12.2\% & 15 & 2 \\
+ & & & & & Multivarié & 2.5 & 0.0\% & 0 & 4\\ \cline{5-10}
+ & & & & \multirow{2}*{\textbf{3}} & Univarié & 60.0 & 17.4\% & 11 & 3 \\
+ & & & & & Multivarié & 2.0 & 0.0\% & 0 & 1\\ \cline{5-10}
+ & & & & \multirow{2}*{\textbf{4}} & Univarié & 60.0 & 2739.9\% & 46 & 15 \\
+ & & & & & Multivarié & 59.7 & 0.0\% & 0 & 3\\ \cline{5-10}
+\multirow{6}*{\textbf{ecoli}} & \multirow{6}*{\textbf{7}} & \multirow{6}*{\textbf{268}} & \multirow{6}*{\textbf{68}} & \multirow{2}*{\textbf{2}} & Univarié & 60.0 & 25.5\% & 66 & 22 \\
+ & & & & & Multivarié & 60.0 & 8.4\% & 42 & 14\\ \cline{5-10}
+ & & & & \multirow{2}*{\textbf{3}} & Univarié & 60.1 & 482.6\% & 221 & 57 \\
+ & & & & & Multivarié & 60.0 & 55.8\% & 94 & 24\\ \cline{5-10}
+ & & & & \multirow{2}*{\textbf{4}} & Univarié & 60.1 & 2.68e8\% & 155 & 38 \\
+ & & & & & Multivarié & 60.1 & 145.9\% & 71 & 27\\ \cline{5-10}
+\multirow{6}*{\textbf{glass}} & \multirow{6}*{\textbf{9}} & \multirow{6}*{\textbf{171}} & \multirow{6}*{\textbf{43}} & \multirow{2}*{\textbf{2}} & Univarié & 60.0 & 67.3\% & 77 & 28 \\
+ & & & & & Multivarié & 60.0 & 32.8\% & 47 & 23\\ \cline{5-10}
+ & & & & \multirow{2}*{\textbf{3}} & Univarié & 60.0 & 96.6\% & 85 & 27 \\
+ & & & & & Multivarié & 60.0 & 108.5\% & 44 & 22\\ \cline{5-10}
+ & & & & \multirow{2}*{\textbf{4}} & Univarié & 60.1 & 1.71e8\% & 114 & 30 \\
+ & & & & & Multivarié & 60.0 & 968.7\% & 117 & 36\\ \cline{5-10}
+\bottomrule
+    \end{tabular}
+    \caption{Résultats numériques par approche classique utilisant callback.}
+    \label{tab:mainCallback}
+    \end{table}
+

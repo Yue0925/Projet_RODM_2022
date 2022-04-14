@@ -67,10 +67,15 @@ function main(cb=false; onethread=false)
 end
 
 
-function table_main()
-    cb=false; onethread=true
-    fout = open("../res/main_1_thread.tex", "w")
+function table_main(cb=false)
+    onethread=true
+    if cb
+        fout = open("../res/main_callback.tex", "w")
+    else
+        fout = open("../res/main_1_thread.tex", "w")
 
+    end
+    
     latex = raw"""\begin{table}[htbp]
     \centering
     \renewcommand{\arraystretch}{1.2}
@@ -164,12 +169,22 @@ function table_main()
     end 
 
 
-    latex = raw"""\bottomrule
+    if cb
+        latex = raw"""\bottomrule
     \end{tabular}
-    \caption{ .}
+    \caption{Résultats numériques par approche classique utilisant callback.}
+    \label{tab:mainCallback}
+    \end{table}
+"""
+    else
+        latex = raw"""\bottomrule
+    \end{tabular}
+    \caption{Résultats numériques par approche classique.}
     \label{tab:main1Thr}
     \end{table}
 """
+    end
+    
     println(fout, latex)
     close(fout)
 
